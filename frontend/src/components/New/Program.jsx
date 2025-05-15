@@ -124,7 +124,7 @@
 
 // components/programs.js
 
-const program = [
+const programs = [
   {
     id: 1,
     title: "Addition of Two Numbers",
@@ -324,4 +324,4 @@ print(math.gcd(a, b))`,
   },
 ];
 
-export default program;
+export default programs;
