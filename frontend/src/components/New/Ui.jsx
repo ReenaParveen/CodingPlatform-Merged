@@ -1,264 +1,3 @@
-// import React, { useState, useRef, useEffect } from "react";
-// import Editor from "@monaco-editor/react";
-// import axios from "axios";
-// // import programs from "./Program";
-// import "./Ui.css";
-
-// const Ui = () => {
-//   const [darkMode, setDarkMode] = useState(false);
-//   // const [selectedProgram, setSelectedProgram] = useState(programs[0]);
-//   const [code, setCode] = useState(""); // Blank editor
-//   const [output, setOutput] = useState("");
-//   const [isRunning, setIsRunning] = useState(false);
-//   const [userInputs, setUserInputs] = useState([]);
-//   const [currentPrompt, setCurrentPrompt] = useState("");
-//   const [inputIndex, setInputIndex] = useState(0);
-//   const inputRef = useRef(null);
-//   const [testResults, setTestResults] = useState([]);
-//   const [programs, setPrograms] = useState([]);
-//   const [selectedProgram, setSelectedProgram] = useState(null);
-
-//   useEffect(() => {
-//   const fetchPrograms = async () => {
-//     try {
-//       const response = await axios.get("http://localhost:5000/programs");
-//       setPrograms(response.data);
-//       if (response.data.length > 0) {
-//         setSelectedProgram(response.data[0]); // optionally select first one
-//       }
-//     } catch (error) {
-//       console.error("Error fetching programs:", error);
-//     }
-//   };
-
-//   fetchPrograms();
-// }, []);
-
-//   const inputRegex = /input\((["'`])(.*?)\1\)/g;
-
-//   const toggleDarkMode = () => setDarkMode(!darkMode);
-
-//   const cleanCode = (code) =>
-//     code
-//       .split("\n")
-//       .filter((line) => !line.trim().startsWith("#"))
-//       .join("\n")
-//       .replace(/input\s*\(\s*["'][^"']*["']\s*\)/g, "input()");
-
-//   const handleProgramChange = (e) => {
-//     const program = programs.find((p) => p.id === parseInt(e.target.value));
-//     setSelectedProgram(program);
-//     setCode(""); // Keep editor blank
-//     setOutput("");
-//     setTestResults([]);
-//     setUserInputs([]);
-//     setCurrentPrompt("");
-//     setInputIndex(0);
-//   };
-
-//   const handleRun = () => {
-//     setOutput("");
-//     setUserInputs([]);
-//     setInputIndex(0);
-//     setTestResults([]);
-
-//     const uncommentedCode = cleanCode(code);
-//     const prompts = [...code.matchAll(inputRegex)].map((match) => match[2]);
-
-//     if (prompts.length > 0) {
-//       setCurrentPrompt(prompts[0]);
-//       setTimeout(() => inputRef.current && inputRef.current.focus(), 100);
-//     } else {
-//       executeCode(uncommentedCode, "");
-//     }
-//   };
-
-//   const handleInputSubmit = (e) => {
-//     if (e.key === "Enter") {
-//       e.preventDefault();
-//       const input = e.target.value;
-//       const updatedInputs = [...userInputs, input];
-//       setUserInputs(updatedInputs);
-
-//       const prompts = [...code.matchAll(inputRegex)].map((match) => match[2]);
-//       const nextIndex = inputIndex + 1;
-
-//       setOutput((prev) => prev + `${currentPrompt} ${input}\n`);
-
-//       if (nextIndex < prompts.length) {
-//         setCurrentPrompt(prompts[nextIndex]);
-//         setInputIndex(nextIndex);
-//         e.target.value = "";
-//         setTimeout(() => inputRef.current && inputRef.current.focus(), 100);
-//       } else {
-//         const finalInput = updatedInputs.join("\n");
-//         const uncommentedCode = cleanCode(code);
-//         executeCode(uncommentedCode, finalInput);
-//       }
-//     }
-//   };
-
-//   const executeCode = async (codeToRun, inputToSend) => {
-//     setIsRunning(true);
-//     try {
-//       const response = await axios.post("http://localhost:5000/run", {
-//         code: codeToRun,
-//         input: inputToSend,
-//       });
-//       setOutput((prev) => prev + response.data.output);
-//     } catch (error) {
-//       setOutput("Error: Unable to execute code.");
-//       console.error(error);
-//     }
-//     setIsRunning(false);
-//     setCurrentPrompt("");
-//     setInputIndex(0);
-//   };
-
-//   const handleRunTestCases = async () => {
-//     setOutput("");
-//     setTestResults([]);
-//     setIsRunning(true);
-
-//     const uncommentedCode = cleanCode(code);
-//     const results = [];
-
-//     for (let i = 0; i < selectedProgram.testCases.length; i++) {
-//       const { input, expectedOutput } = selectedProgram.testCases[i];
-//       try {
-//         const response = await axios.post("http://localhost:5000/run", {
-//           code: uncommentedCode,
-//           input: input,
-//         });
-
-//         const actualOutput = response.data.output.trim();
-//         const expected = expectedOutput.trim();
-//         const passed = actualOutput === expected;
-
-//         results.push({
-//           input,
-//           expectedOutput: expected,
-//           actualOutput: actualOutput,
-//           passed,
-//         });
-//       } catch (error) {
-//         results.push({
-//           input,
-//           expectedOutput,
-//           actualOutput: "Error executing code",
-//           passed: false,
-//         });
-//       }
-//     }
-
-//     setTestResults(results);
-//     setIsRunning(false);
-//   };
-
-//   return (
-//     <div className={`container ${darkMode ? "dark" : ""}`}>
-//       <div className="header">
-//         <div className="left-controls">
-//           <select
-//             value={selectedProgram?.id || ""}
-//             onChange={handleProgramChange}
-//             className="program-select"
-//           >
-//             {programs.map((p) => (
-//               <option key={p.id} value={p.id}>
-//                 {p.title}
-//               </option>
-//             ))}
-//           </select>
-//           <button
-//             className="run-button"
-//             onClick={handleRun}
-//             disabled={isRunning}
-//           >
-//             {isRunning ? "Running..." : "Run User Code"}
-//           </button>
-
-//           <button
-//             className="run-button"
-//             onClick={handleRunTestCases}
-//             disabled={isRunning}
-//           >
-//             {isRunning ? "Running..." : "Run with Test Cases"}
-//           </button>
-
-//           <select className="language-select" disabled>
-//             <option>Python</option>
-//           </select>
-//         </div>
-
-//         <button className="toggle-btn" onClick={toggleDarkMode}>
-//           {darkMode ? "🌞 Light" : "🌙 Dark"}
-//         </button>
-//       </div>
-
-//       <div className="main">
-//         <div className="editor">
-//           <div className="problem-statement">
-//             {/* <h3>Problem Statement:{selectedProgram.description}</h3> */}
-//             <p>{selectedProgram.description}</p>
-//           </div>
-
-//           <Editor
-//             height="100%"
-//             defaultLanguage="python"
-//             value={code}
-//             theme={darkMode ? "vs-dark" : "light"}
-//             onChange={(value) => setCode(value || "")}
-//           />
-//         </div>
-
-//         <div className="output">
-//           <div className="output-label">Output:</div>
-//           <div className="console">
-//             <pre>{output}</pre>
-//             {currentPrompt && (
-//               <div className="input-section">
-//                 <span>{currentPrompt}</span>
-//                 <input
-//                   ref={inputRef}
-//                   type="text"
-//                   className="terminal-input-inline"
-//                   onKeyDown={handleInputSubmit}
-//                   autoFocus
-//                 />
-//               </div>
-//             )}
-//           </div>
-
-//           {testResults.length > 0 && (
-//             <div className="test-results">
-//               <h4>Test Case Results:</h4>
-//               {testResults.map((result, idx) => (
-//                 <div
-//                   key={idx}
-//                   className={`test-case ${result.passed ? "pass" : "fail"}`}
-//                 >
-//                   <strong>Input:</strong>{" "}
-//                   {result.input.split("\n").join(", ")}
-//                   <br />
-//                   <strong>Expected Output:</strong> {result.expectedOutput}
-//                   <br />
-//                   <strong>Actual Output:</strong> {result.actualOutput}
-//                   <br />
-//                   <strong>Status:</strong>{" "}
-//                   {result.passed ? "✅ Passed" : "❌ Failed"}
-//                 </div>
-//               ))}
-//             </div>
-//           )}
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default Ui;
-
 import React, { useState, useRef, useEffect } from "react";
 import Editor from "@monaco-editor/react";
 import axios from "axios";
@@ -272,43 +11,109 @@ const Ui = () => {
   const [userInputs, setUserInputs] = useState([]);
   const [currentPrompt, setCurrentPrompt] = useState("");
   const [inputIndex, setInputIndex] = useState(0);
-  const inputRef = useRef(null);
   const [testResults, setTestResults] = useState([]);
   const [programs, setPrograms] = useState([]);
   const [selectedProgram, setSelectedProgram] = useState(null);
+  const [language, setLanguage] = useState("Python");
+  const inputRef = useRef(null);
 
   const inputRegex = /input\((["'`])(.*?)\1\)/g;
 
-  useEffect(() => {
-    const fetchPrograms = async () => {
-      try {
-        const response = await axios.get("http://localhost:5000/programs");
-        setPrograms(response.data);
-        if (response.data.length > 0) {
-          setSelectedProgram(response.data[0]);
-        }
-      } catch (error) {
-        console.error("Error fetching programs:", error);
-      }
-    };
+  // Fetch programs filtered by selected language
+  //   useEffect(() => {
+  //   const fetchProgramsByLanguage = async () => {
+  //     try {
+  //       const response = await axios.get("http://localhost:5000/programs");
+  //       const filtered = response.data.filter(
+  //         (p) =>
+  //           typeof p.language === "string" &&
+  //           p.language.toLowerCase() === language.toLowerCase()
+  //       );
+  //       setPrograms(filtered);
+  //       if (filtered.length > 0) {
+  //         setSelectedProgram(filtered[0]);
+  //         setCode(filtered[0].code || "");
+  //       } else {
+  //         setSelectedProgram(null);
+  //         setCode("");
+  //       }
+  //     } catch (err) {
+  //       console.error("Error fetching programs:", err);
+  //     }
+  //   };
 
-    fetchPrograms();
+  //   fetchProgramsByLanguage();
+  // }, [language]);
+
+ useEffect(() => {
+  const fetchProgramsByLanguage = async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/programs");
+      console.log("Programs from API:", response.data);
+      console.log("Selected language:", language);
+
+      const filtered = response.data.filter((program) =>
+        program.codes.some(
+          (code) => code.language?.toLowerCase() === language.toLowerCase()
+        )
+      );
+
+      console.log("Filtered:", filtered);
+
+      setPrograms(filtered);
+      if (filtered.length > 0) {
+        const selected = filtered[0];
+        const selectedCode = selected.codes.find(
+          (code) => code.language?.toLowerCase() === language.toLowerCase()
+        );
+        setSelectedProgram(selected);
+        setCode(selectedCode?.solution || "");
+      } else {
+        setSelectedProgram(null);
+        setCode("");
+      }
+    } catch (error) {
+      console.error("Failed to fetch programs:", error);
+    }
+  };
+
+  if (language) {
+    fetchProgramsByLanguage();
+  }
+}, [language]);
+
+
+  useEffect(() => {
+    // Clear ResizeObserver warnings (optional)
+    const observerErrorHandler = () => {
+      let raf = requestAnimationFrame(() => {
+        console.clear();
+      });
+      return () => cancelAnimationFrame(raf);
+    };
+    observerErrorHandler();
   }, []);
 
   const toggleDarkMode = () => setDarkMode(!darkMode);
 
-  const cleanCode = (code) =>
-    code
-      .split("\n")
-      .filter((line) => !line.trim().startsWith("#"))
-      .join("\n")
-      .replace(/input\s*\(\s*["'][^"']*["']\s*\)/g, "input()");
+  // Remove comments and standardize input() for Python only
+  const cleanCode = (code) => {
+    if (language.toLowerCase() === "python") {
+      return code
+        .split("\n")
+        .filter((line) => !line.trim().startsWith("#"))
+        .join("\n")
+        .replace(/input\s*\(\s*["'][^"']*["']\s*\)/g, "input()");
+    }
+    // For JS or other languages, return code as is
+    return code;
+  };
 
   const handleProgramChange = (e) => {
     const selectedId = e.target.value;
     const program = programs.find((p) => p._id === selectedId);
     setSelectedProgram(program);
-    setCode("");
+    setCode(program?.code || ""); // ✅ Set the code here
     setOutput("");
     setTestResults([]);
     setUserInputs([]);
@@ -316,31 +121,17 @@ const Ui = () => {
     setInputIndex(0);
   };
 
-  // const handleRun = () => {
-  //   setOutput("");
-  //   setUserInputs([]);
-  //   setInputIndex(0);
-  //   setTestResults([]);
-
-  //   const uncommentedCode = cleanCode(code);
-  //   const prompts = [...code.matchAll(inputRegex)].map((match) => match[2]);
-
-  //   if (prompts.length > 0) {
-  //     setCurrentPrompt(prompts[0]);
-  //     setTimeout(() => inputRef.current && inputRef.current.focus(), 100);
-  //   } else {
-  //     executeCode(uncommentedCode, "");
-  //   }
-  // };
-
- const handleRun = () => {
+  const handleRun = () => {
     setOutput("");
     setUserInputs([]);
     setInputIndex(0);
     setTestResults([]);
 
     const uncommentedCode = cleanCode(code);
-    const prompts = [...code.matchAll(inputRegex)].map((match) => match[2]);
+    const prompts =
+      language.toLowerCase() === "python"
+        ? [...code.matchAll(inputRegex)].map((match) => match[2])
+        : []; // No prompt detection for JS (or you can add if needed)
 
     if (prompts.length > 0) {
       setCurrentPrompt(prompts[0]);
@@ -349,7 +140,6 @@ const Ui = () => {
       executeCode(uncommentedCode, "");
     }
   };
-
 
   const handleInputSubmit = (e) => {
     if (e.key === "Enter") {
@@ -382,6 +172,7 @@ const Ui = () => {
       const response = await axios.post("http://localhost:5000/run", {
         code: codeToRun,
         input: inputToSend,
+        language,
       });
       setOutput((prev) => prev + response.data.output);
     } catch (error) {
@@ -411,6 +202,7 @@ const Ui = () => {
         const response = await axios.post("http://localhost:5000/run", {
           code: uncommentedCode,
           input,
+          language,
         });
 
         const actualOutput = response.data.output.trim();
@@ -438,63 +230,73 @@ const Ui = () => {
   };
 
   return (
-    <div className={`container ${darkMode ? "dark" : ""}`}>
-      <div className="header">
-        <div className="left-controls">
-          <select
-            value={selectedProgram?._id || ""}
-            onChange={handleProgramChange}
-            className="program-select"
-          >
-            {programs.map((program) => (
+  <div className={`container ${darkMode ? "dark" : ""}`}>
+    <div className="header">
+      <div className="left-controls">
+        <select
+          value={selectedProgram?._id || ""}
+          onChange={handleProgramChange}
+          className="program-select"
+        >
+          {programs.map((program) => (
               <option key={program._id} value={program._id}>
                 {program.title}
               </option>
-            ))}
-          </select>
+          ))}
+        </select>
 
-          <button
-            className="run-button"
-            onClick={handleRun}
-            disabled={isRunning}
-          >
-            {isRunning ? "Running..." : "Run User Code"}
-          </button>
+        <button
+          className="run-button"
+          onClick={handleRun}
+          disabled={isRunning}
+        >
+          {isRunning ? "Running..." : "Run User Code"}
+        </button>
 
-          <button
-            className="run-button"
-            onClick={handleRunTestCases}
-            disabled={isRunning}
-          >
-            {isRunning ? "Running..." : "Run with Test Cases"}
-          </button>
+        <button
+          className="run-button"
+          onClick={handleRunTestCases}
+          disabled={isRunning}
+        >
+          {isRunning ? "Running..." : "Run with Test Cases"}
+        </button>
 
-          <select className="language-select" disabled>
-            <option>Python</option>
-          </select>
-        </div>
+        <select
+          className="language-select"
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+        >
+          <option>Python</option>
+          <option>JavaScript</option>
+          <option>Java</option>
+          <option>C</option>
+          <option>C++</option>
+        </select>
 
         <button className="toggle-btn" onClick={toggleDarkMode}>
           {darkMode ? "🌞 Light" : "🌙 Dark"}
         </button>
       </div>
+    </div>
 
-      <div className="main">
-        <div className="editor">
-          <div className="problem-statement">
-            <p>{selectedProgram?.description}</p>
-          </div>
+    <div className="main">
+      <div className="editor">
+        <div className="problem-statement">
+          <p>{selectedProgram?.description}</p>
+        </div>
 
+        <div style={{ height: "800px", border: "1px solid #ccc" }}>
           <Editor
             height="100%"
-            defaultLanguage="python"
+            language={language.toLowerCase() === "javascript" ? "javascript" : "python"}
             value={code}
             theme={darkMode ? "vs-dark" : "light"}
             onChange={(value) => setCode(value || "")}
           />
         </div>
+      </div>
 
-        <div className="output">
+      <div className="output">
           <div className="output-label">Output:</div>
           <div className="console">
             <pre>{output}</pre>
@@ -513,7 +315,7 @@ const Ui = () => {
             )}
           </div>
 
-          {testResults.length > 0 && (
+       {testResults.length > 0 && (
             <div className="test-results">
               <h4>Test Case Results:</h4>
               {testResults.map((result, idx) => (
@@ -535,11 +337,11 @@ const Ui = () => {
                 </div>
               ))}
             </div>
-          )}
-        </div>
+        )}
       </div>
     </div>
-  );
+  </div>
+);
 };
 
 export default Ui;

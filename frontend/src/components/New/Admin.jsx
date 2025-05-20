@@ -1,444 +1,285 @@
-// import React, { useEffect, useState } from "react";
-// import axios from "axios";
-// import "./Admin.css"
-
-// const AdminPrograms = () => {
-//   const [programs, setPrograms] = useState([]);
-//   const [title, setTitle] = useState("");
-//   const [code, setCode] = useState("");
-//   const [testCases, setTestCases] = useState([{ input: "", expectedOutput: "" }]);
-//   const [editId, setEditId] = useState(null);
-
-//   const API_BASE = "http://localhost:5000";
-
-//   // Fetch all programs
-//   useEffect(() => {
-//     fetchPrograms();
-//   }, []);
-
-//   const fetchPrograms = async () => {
-//     const res = await axios.get(`${API_BASE}/programs`);
-//     setPrograms(res.data);
-//   };
-
-//   const handleAddOrUpdate = async () => {
-//     const payload = { title, code, testCases };
-//     if (editId) {
-//       await axios.put(`${API_BASE}/programs/${editId}`, payload);
-//       setEditId(null);
-//     } else {
-//       await axios.post(`${API_BASE}/programs`, payload);
-//     }
-//     resetForm();
-//     fetchPrograms();
-//   };
-
-//   const resetForm = () => {
-//     setTitle("");
-//     setCode("");
-//     setTestCases([{ input: "", expectedOutput: "" }]);
-//     setEditId(null);
-//   };
-
-//   const handleDelete = async (id) => {
-//     await axios.delete(`${API_BASE}/programs/${id}`);
-//     fetchPrograms();
-//   };
-
-//   const handleEdit = (program) => {
-//     setTitle(program.title);
-//     setCode(program.code);
-//     setTestCases(program.testCases);
-//     setEditId(program._id);
-//   };
-
-//   const handleTestCaseChange = (index, field, value) => {
-//     const updated = [...testCases];
-//     updated[index][field] = value;
-//     setTestCases(updated);
-//   };
-
-//   const addTestCase = () => {
-//     setTestCases([...testCases, { input: "", expectedOutput: "" }]);
-//   };
-
-//   return (
-//     <div className="admin-container" style={{ padding: "20px", maxWidth: "800px", margin: "auto" }}>
-//       <h2>{editId ? "Edit Program" : "Add New Program"}</h2>
-//       <input
-//         type="text"
-//         placeholder="Program Title"
-//         value={title}
-//         onChange={(e) => setTitle(e.target.value)}
-//         style={{ width: "100%", marginBottom: "10px" }}
-//       />
-//       <textarea
-//         placeholder="Code"
-//         value={code}
-//         onChange={(e) => setCode(e.target.value)}
-//         rows={6}
-//         style={{ width: "100%", marginBottom: "10px" }}
-//       />
-
-//       <h4>Test Cases</h4>
-//       {testCases.map((tc, idx) => (
-//         <div key={idx} style={{ marginBottom: "10px" }}>
-//           <input
-//             type="text"
-//             placeholder="Input"
-//             value={tc.input}
-//             onChange={(e) => handleTestCaseChange(idx, "input", e.target.value)}
-//             style={{ width: "48%", marginRight: "4%" }}
-//           />
-//           <input
-//             type="text"
-//             placeholder="Expected Output"
-//             value={tc.expectedOutput}
-//             onChange={(e) => handleTestCaseChange(idx, "expectedOutput", e.target.value)}
-//             style={{ width: "48%" }}
-//           />
-//         </div>
-//       ))}
-//       <button onClick={addTestCase}>➕ Add Test Case</button>
-//       <br />
-//       <button onClick={handleAddOrUpdate} style={{ marginTop: "15px" }}>
-//         {editId ? "Update Program" : "Add Program"}
-//       </button>
-//       <hr />
-//       <h2>Existing Programs</h2>
-//       {programs.map((prog) => (
-//         <div key={prog._id} style={{ border: "1px solid #ccc", padding: "10px", marginBottom: "10px" }}>
-//           <h4>{prog.title}</h4>
-//           <pre style={{ background: "#f9f9f9", padding: "10px" }}>{prog.code}</pre>
-//           <strong>Test Cases:</strong>
-//           <ul>
-//             {prog.testCases.map((tc, i) => (
-//               <li key={i}>
-//                 Input: <code>{tc.input}</code> → Output: <code>{tc.expectedOutput}</code>
-//               </li>
-//             ))}
-//           </ul>
-//           <button onClick={() => handleEdit(prog)}>✏️ Edit</button>{" "}
-//           <button onClick={() => handleDelete(prog._id)}>❌ Delete</button>
-//         </div>
-//       ))}
-//     </div>
-//   );
-// };
-
-// export default AdminPrograms;
-// import React, { useEffect, useState } from "react";
-// import axios from "axios";
-
-// const AdminPrograms = () => {
-//   const [programs, setPrograms] = useState([]);
-//   const [title, setTitle] = useState("");
-//   const [code, setCode] = useState("");
-//   const [testCases, setTestCases] = useState([""]);
-//   const [editId, setEditId] = useState(null);
-
-//   const API_BASE = "http://localhost:5000";
-
-//   // Fetch all programs
-//   useEffect(() => {
-//     fetchPrograms();
-//   }, []);
-
-//   const fetchPrograms = async () => {
-//     const res = await axios.get(`${API_BASE}/programs`);
-//     setPrograms(res.data);
-//   };
-
-//   const handleAddOrUpdate = async () => {
-//     const payload = { title, code, testCases: testCases.map((tc) => ({ inputOutput: tc })) };
-//     if (editId) {
-//       await axios.put(`${API_BASE}/programs/${editId}`, payload);
-//       setEditId(null);
-//     } else {
-//       await axios.post(`${API_BASE}/programs`, payload);
-//     }
-//     resetForm();
-//     fetchPrograms();
-//   };
-
-//   const resetForm = () => {
-//     setTitle("");
-//     setCode("");
-//     setTestCases([""]);
-//     setEditId(null);
-//   };
-
-//   const handleDelete = async (id) => {
-//     await axios.delete(`${API_BASE}/programs/${id}`);
-//     fetchPrograms();
-//   };
-
-//   const handleEdit = (program) => {
-//     setTitle(program.title);
-//     setCode(program.code);
-//     setTestCases(program.testCases.map((tc) => tc.inputOutput));
-//     setEditId(program._id);
-//   };
-
-//   const handleTestCaseChange = (index, value) => {
-//     const updated = [...testCases];
-//     updated[index] = value;
-//     setTestCases(updated);
-//   };
-
-//   const addTestCase = () => {
-//     setTestCases([...testCases, ""]);
-//   };
-
-//   return (
-//     <div className="admin-container" style={{ padding: "20px", maxWidth: "800px", margin: "auto" }}>
-//       <h2>{editId ? "Edit Program" : "Add New Program"}</h2>
-//       <input
-//         type="text"
-//         placeholder="Program Title"
-//         value={title}
-//         onChange={(e) => setTitle(e.target.value)}
-//         style={{ width: "100%", marginBottom: "10px" }}
-//       />
-//       <textarea
-//         placeholder="Code"
-//         value={code}
-//         onChange={(e) => setCode(e.target.value)}
-//         rows={6}
-//         style={{ width: "100%", marginBottom: "10px" }}
-//       />
-
-//       <h4>Test Cases</h4>
-//       {testCases.map((tc, idx) => (
-//         <div key={idx} style={{ marginBottom: "10px" }}>
-//           <textarea
-//             placeholder={`Test Case ${idx + 1} (input\nexpectedOutput)`}
-//             value={tc}
-//             onChange={(e) => handleTestCaseChange(idx, e.target.value)}
-//             rows={4}
-//             style={{ width: "100%" }}
-//           />
-//         </div>
-//       ))}
-//       <button onClick={addTestCase}>➕ Add Test Case</button>
-//       <br />
-//       <button onClick={handleAddOrUpdate} style={{ marginTop: "15px" }}>
-//         {editId ? "Update Program" : "Add Program"}
-//       </button>
-//       <hr />
-//       <h2>Existing Programs</h2>
-//       {programs.map((prog) => (
-//         <div key={prog._id} style={{ border: "1px solid #ccc", padding: "10px", marginBottom: "10px" }}>
-//           <h4>{prog.title}</h4>
-//           <pre style={{ background: "#f9f9f9", padding: "10px" }}>{prog.code}</pre>
-//           <strong>Test Cases:</strong>
-//           <ul>
-//             {prog.testCases.map((tc, i) => (
-//               <li key={i}>
-//                 <strong>Test Case {i + 1}:</strong>
-//                 <br />
-//                 <code>{tc.inputOutput}</code>
-//               </li>
-//             ))}
-//           </ul>
-//           <button onClick={() => handleEdit(prog)}>✏️ Edit</button>{" "}
-//           <button onClick={() => handleDelete(prog._id)}>❌ Delete</button>
-//         </div>
-//       ))}
-//     </div>
-//   );
-// };
-
-// export default AdminPrograms;
-
-
-import React, { useState, useEffect } from 'react';
-import { TextField, Button, Grid, MenuItem, Select, InputLabel, FormControl } from '@mui/material';
-import axios from 'axios';
+import React, { useEffect, useState } from "react";
+import {
+  Box,
+  Button,
+  FormControl,
+  Grid,
+  InputLabel,
+  MenuItem,
+  Select,
+  TextField,
+  Typography,
+} from "@mui/material";
 
 const AdminPrograms = () => {
   const [programs, setPrograms] = useState([]);
-  const [title, setTitle] = useState('');
-  const [code, setCode] = useState('');
-  const [testCases, setTestCases] = useState([{ input: '', expectedOutput: '' }]);
-  const [selectedProgram, setSelectedProgram] = useState('');
+  const [title, setTitle] = useState("");
+  const [codes, setCodes] = useState([{ language: "Python", solution: "" }]);
+  const [testCases, setTestCases] = useState([{ input: "", expectedOutput: "" }]);
   const [editId, setEditId] = useState(null);
 
-  const API_BASE = 'http://localhost:5000';
-
-  // Fetch all programs
   useEffect(() => {
     fetchPrograms();
   }, []);
 
   const fetchPrograms = async () => {
-    const res = await axios.get(`${API_BASE}/programs`);
-    setPrograms(res.data);
-  };
-
-  // Handle program selection change
-  const handleProgramChange = (e) => {
-    setSelectedProgram(e.target.value);
-    formatTestCasesForProgram(e.target.value);
-  };
-
-  // Format test cases based on selected program
-  const formatTestCasesForProgram = (program) => {
-    if (program === 'Program 1') {
-      setTestCases([{ input: '', expectedOutput: '' }]);
-    } else if (program === 'Program 2') {
-      setTestCases([{ input: '', expectedOutput: '', additionalField: '' }]);
+    try {
+      const res = await fetch("http://localhost:5000/programs");
+      if (res.ok) {
+        const data = await res.json();
+        console.log("Fetched Programs:", data); // for debugging
+        setPrograms(data); // Assuming you're using useState
+      } else {
+        console.error("Failed to fetch programs");
+      }
+    } catch (error) {
+      console.error("Error fetching programs", error);
     }
-    // Add more logic for other programs if needed
+  };
+
+
+  const resetForm = () => {
+    setTitle("");
+    setCodes([{ language: "Python", solution: "" }]);
+    setTestCases([{ input: "", expectedOutput: "" }]);
+    setEditId(null);
+  };
+
+  const handleAddCode = () => {
+    setCodes([...codes, { language: "Python", solution: "" }]);
+  };
+
+  const handleRemoveCode = (index) => {
+    if (codes.length === 1) return;
+    const updated = codes.filter((_, i) => i !== index);
+    setCodes(updated);
+  };
+
+  const handleCodeChange = (index, field, value) => {
+    const updated = [...codes];
+    updated[index][field] = value;
+    setCodes(updated);
   };
 
   const handleAddTestCase = () => {
-    setTestCases([...testCases, { input: '', expectedOutput: '' }]);
+    setTestCases([...testCases, { input: "", expectedOutput: "" }]);
   };
 
   const handleTestCaseChange = (index, field, value) => {
-    const updatedTestCases = [...testCases];
-    updatedTestCases[index][field] = value;
-    setTestCases(updatedTestCases);
+    const updated = [...testCases];
+    updated[index][field] = value;
+    setTestCases(updated);
   };
 
   const handleSaveProgram = async () => {
-    const programData = {
+    if (!title.trim()) {
+      alert("Title is required");
+      return;
+    }
+
+    const payload = {
       title,
-      code,
-      testCases
+      codes,
+      testCases,
     };
 
     try {
+      let res;
       if (editId) {
-        await axios.put(`${API_BASE}/programs/${editId}`, programData);
-        setEditId(null);
+        res = await fetch(`http://localhost:5000/programs/${editId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
       } else {
-        await axios.post(`${API_BASE}/programs`, programData);
+        res = await fetch("http://localhost:5000/programs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
       }
-      resetForm();
-      fetchPrograms();
+
+      if (res.ok) {
+        await fetchPrograms(); // assuming this re-fetches the list
+        resetForm();
+      } else {
+        alert("Failed to save program");
+      }
     } catch (error) {
-      console.error('Error saving program:', error);
+      console.error("Error saving program", error);
     }
   };
 
-  const resetForm = () => {
-    setTitle('');
-    setCode('');
-    setTestCases([{ input: '', expectedOutput: '' }]);
-    setSelectedProgram('');
+  const handleEdit = (program) => {
+    setEditId(program._id);
+    setTitle(program.title);
+    setCodes(program.codes.length ? program.codes : [{ language: "Python", solution: "" }]);
+    setTestCases(program.testCases.length ? program.testCases : [{ input: "", expectedOutput: "" }]);
   };
 
   const handleDelete = async (id) => {
-    await axios.delete(`${API_BASE}/programs/${id}`);
-    fetchPrograms();
-  };
-
-  const handleEdit = (program) => {
-    setTitle(program.title);
-    setCode(program.code);
-    setTestCases(program.testCases);
-    setEditId(program._id);
-    setSelectedProgram(program.title); // Assuming the program title matches the selected program
+    if (!window.confirm("Are you sure you want to delete this program?")) return;
+    try {
+      const res = await fetch(`/api/admin/programs/${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        fetchPrograms();
+      } else {
+        alert("Failed to delete program");
+      }
+    } catch (error) {
+      console.error("Error deleting program", error);
+    }
   };
 
   return (
-    <Grid container spacing={2} style={{ padding: '20px', maxWidth: '800px', margin: 'auto' }}>
+    <Grid container spacing={3} padding={3}>
       <Grid item xs={12}>
+        <Typography variant="h5" gutterBottom>
+          {editId ? "Edit Program" : "Add New Program"}
+        </Typography>
         <TextField
-          label="Program Title"
           fullWidth
+          label="Title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          margin="normal"
         />
-      </Grid>
 
-      <Grid item xs={12}>
-        <TextField
-          label="Code"
-          fullWidth
-          multiline
-          rows={6}
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-        />
-      </Grid>
-
-      <Grid item xs={12}>
-        <FormControl fullWidth>
-          <InputLabel>Program</InputLabel>
-          <Select
-            value={selectedProgram}
-            onChange={handleProgramChange}
-            label="Program"
-          >
-            {programs.map((prog) => (
-              <MenuItem key={prog._id} value={prog.title}>
-                {prog.title}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Grid>
-
-      <Grid item xs={12}>
-        <h4>Test Cases</h4>
-        {testCases.map((tc, idx) => (
-          <div key={idx} style={{ marginBottom: '10px' }}>
+        {codes.map((code, index) => (
+          <Box key={index} mb={2}>
+            <FormControl fullWidth margin="normal">
+              <InputLabel>Language</InputLabel>
+              <Select
+                value={code.language}
+                onChange={(e) =>
+                  handleCodeChange(index, "language", e.target.value)
+                }
+                fullWidth
+              >
+                <MenuItem value="Python">Python</MenuItem>
+                <MenuItem value="JavaScript">JavaScript</MenuItem>
+              </Select>
+            </FormControl>
             <TextField
-              label={`Test Case ${idx + 1} Input`}
               fullWidth
+              label="Solution"
               multiline
-              rows={2}
-              value={tc.input}
-              onChange={(e) => handleTestCaseChange(idx, 'input', e.target.value)}
+              rows={4}
+              value={code.solution}
+              onChange={(e) =>
+                handleCodeChange(index, "solution", e.target.value)
+              }
+              margin="normal"
             />
-            <TextField
-              label={`Test Case ${idx + 1} Expected Output`}
-              fullWidth
-              multiline
-              rows={2}
-              value={tc.expectedOutput}
-              onChange={(e) => handleTestCaseChange(idx, 'expectedOutput', e.target.value)}
-            />
-          </div>
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={() => handleRemoveCode(index)}
+              disabled={codes.length === 1}
+            >
+              Remove Code Block
+            </Button>
+          </Box>
         ))}
-        <Button onClick={handleAddTestCase}>➕ Add Test Case</Button>
-      </Grid>
 
-      <Grid item xs={12}>
-        <Button onClick={handleSaveProgram} variant="contained" color="primary">
-          {editId ? 'Update Program' : 'Add Program'}
+        <Button
+          variant="outlined"
+          onClick={handleAddCode}
+          style={{ marginBottom: "20px" }}
+        >
+          Add Code Block
         </Button>
+
+        <Typography variant="h6" gutterBottom>
+          Test Cases
+        </Typography>
+
+        {testCases.map((testCase, index) => (
+          <Box key={index} mb={2}>
+            <TextField
+              fullWidth
+              label="Input"
+              value={testCase.input}
+              onChange={(e) =>
+                handleTestCaseChange(index, "input", e.target.value)
+              }
+              margin="normal"
+              multiline
+              rows={4} // You can adjust number of visible lines
+            />
+            <TextField
+              fullWidth
+              label="Expected Output"
+              value={testCase.expectedOutput}
+              onChange={(e) =>
+                handleTestCaseChange(index, "expectedOutput", e.target.value)
+              }
+              margin="normal"
+              multiline // Optional: only if you want output to be multi-line too
+              rows={2}
+            />
+          </Box>
+        ))}
+
+        <Button
+          variant="outlined"
+          onClick={handleAddTestCase}
+          style={{ marginBottom: "20px" }}
+        >
+          Add Test Case
+        </Button>
+
+        <Box display="flex" gap={2}>
+          <Button variant="contained" color="primary" onClick={handleSaveProgram}>
+            {editId ? "Update Program" : "Save Program"}
+          </Button>
+          <Button variant="outlined" onClick={resetForm}>
+            Clear
+          </Button>
+        </Box>
       </Grid>
 
       <Grid item xs={12}>
-        <hr />
-        <h2>Existing Programs</h2>
-        {programs.map((prog) => (
-          <div key={prog._id} style={{ border: '1px solid #ccc', padding: '10px', marginBottom: '10px' }}>
-            <h4>{prog.title}</h4>
-            <pre style={{ background: '#f9f9f9', padding: '10px' }}>{prog.code}</pre>
-            <strong>Test Cases:</strong>
-            <ul>
-              {prog.testCases.map((tc, i) => (
-                <li key={i}>
-                  <strong>Test Case {i + 1}:</strong>
-                  <br />
-                  <code>{tc.input}</code>
-                  <br />
-                  <code>{tc.expectedOutput}</code>
-                </li>
-              ))}
-            </ul>
-            <Button onClick={() => handleEdit(prog)} variant="outlined" color="primary">
-              ✏️ Edit
-            </Button>
-            <Button onClick={() => handleDelete(prog._id)} variant="outlined" color="secondary">
-              ❌ Delete
-            </Button>
-          </div>
+        <Typography variant="h5" gutterBottom>
+          Existing Programs
+        </Typography>
+        {programs.map((program) => (
+          <Box
+            key={program._id}
+            border={1}
+            borderRadius={4}
+            p={2}
+            mb={2}
+            borderColor="grey.300"
+          >
+            <Typography variant="h6">{program.title}</Typography>
+            {program.codes.map((code, i) => (
+              <Box key={i} ml={2} mb={1}>
+                <Typography variant="subtitle2">Language: {code.language}</Typography>
+                <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
+                  {code.solution}
+                </Typography>
+              </Box>
+            ))}
+            <Box display="flex" gap={2} mt={2}>
+              <Button
+                variant="outlined"
+                color="primary"
+                onClick={() => handleEdit(program)}
+              >
+                Edit
+              </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                onClick={() => handleDelete(program._id)}
+              >
+                Delete
+              </Button>
+            </Box>
+          </Box>
         ))}
       </Grid>
     </Grid>

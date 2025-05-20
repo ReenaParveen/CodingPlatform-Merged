@@ -1,53 +1,12 @@
-// const express = require("express");
-// const cors = require("cors");
-// const axios = require("axios");
-
-// const app = express();
-// const PORT = 5000;
-
-// app.use(cors());
-// app.use(express.json());
-
-// app.post("/run", async (req, res) => {
-//     const { code, input, language } = req.body;
-  
-//     // Default to python3 if no language is specified
-//     const selectedLanguage = language === "python2" ? "python2" : "python3";
-//     const version = selectedLanguage === "python2" ? "2.7.18" : "3.10.0"; // Adjust versions based on Piston API support
-  
-//     try {
-//       const response = await axios.post("https://emkc.org/api/v2/piston/execute", {
-//         language: selectedLanguage,
-//         version: version,
-//         files: [
-//           {
-//             name: "main.py",
-//             content: code,
-//           },
-//         ],
-//         stdin: input || "",
-//       });
-  
-//       res.json({ output: response.data.run.output });
-//     } catch (error) {
-//       console.error("Execution error:", error.message || error);
-//       res.status(500).json({ output: "Server Error: Unable to execute code." });
-//     }
-//   });  
-
-// app.listen(PORT, () => {
-//   console.log(`Server is running on http://localhost:${PORT}`);
-// });
-
-
 const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
 const mongoose = require("mongoose");
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
+// Middleware
 app.use(cors());
 app.use(express.json());
 
@@ -56,14 +15,24 @@ mongoose.connect("mongodb://localhost:27017/codePlatform", {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
+
 const db = mongoose.connection;
 db.on("error", console.error.bind(console, "MongoDB connection error:"));
-db.once("open", () => console.log("Connected to MongoDB"));
+db.once("open", () => console.log("✅ Connected to MongoDB"));
 
-// Define Program Schema
+// Define Schema and Model
 const programSchema = new mongoose.Schema({
-  title: String,
-  code: String,
+  title: { type: String, required: true },
+  codes: [
+    {
+      language: {
+        type: String,
+        enum: ["Python", "JavaScript"],
+        required: true,
+      },
+      solution: { type: String, required: true },
+    }
+  ],
   testCases: [
     {
       input: String,
@@ -74,18 +43,27 @@ const programSchema = new mongoose.Schema({
 
 const Program = mongoose.model("Program", programSchema);
 
-// Code Execution Route 
+// === Code Execution Route ===
 app.post("/run", async (req, res) => {
   const { code, input, language } = req.body;
 
-  const selectedLanguage = language === "python2" ? "python2" : "python3";
-  const version = selectedLanguage === "python2" ? "2.7.18" : "3.10.0";
+  let selectedLanguage, version;
+
+  if (language === "Python") {
+    selectedLanguage = "python3";
+    version = "3.10.0";
+  } else if (language === "JavaScript") {
+    selectedLanguage = "javascript";
+    version = "18.15.0";
+  } else {
+    return res.status(400).json({ output: `Language '${language}' not supported.` });
+  }
 
   try {
     const response = await axios.post("https://emkc.org/api/v2/piston/execute", {
       language: selectedLanguage,
       version,
-      files: [{ name: "main.py", content: code }],
+      files: [{ name: "main", content: code }],
       stdin: input || "",
     });
 
@@ -96,13 +74,21 @@ app.post("/run", async (req, res) => {
   }
 });
 
-
-// === New Routes for Programs ===
-
-// Get all programs
+// === CRUD Routes ===
+ 
+// Get all programs OR filter by language
 app.get("/programs", async (req, res) => {
+  const { language } = req.query;
+
+  let filter = {};
+  if (language) {
+    filter = {
+      "codes.language": language,
+    };
+  }
+
   try {
-    const programs = await Program.find();
+    const programs = await Program.find(filter);
     res.json(programs);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch programs" });
@@ -116,7 +102,7 @@ app.post("/programs", async (req, res) => {
     await newProgram.save();
     res.status(201).json(newProgram);
   } catch (err) {
-    res.status(400).json({ error: "Failed to add program" });
+    res.status(400).json({ error: "Failed to add program", details: err.message });
   }
 });
 
@@ -140,6 +126,7 @@ app.delete("/programs/:id", async (req, res) => {
   }
 });
 
+// Start the server
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`🚀 Server is running on http://localhost:${PORT}`);
 });
