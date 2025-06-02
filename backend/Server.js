@@ -45,7 +45,7 @@ const Program = mongoose.model("Program", programSchema);
 
 // === Code Execution Route ===
 app.post("/run", async (req, res) => {
-  const { code, input, language } = req.body;
+  let { code, input, language } = req.body;
 
   let selectedLanguage, version;
 
@@ -55,6 +55,36 @@ app.post("/run", async (req, res) => {
   } else if (language === "JavaScript") {
     selectedLanguage = "javascript";
     version = "18.15.0";
+
+    const inputVars = [];
+    let inputCounter = 0;
+
+    // Handle prompt() with input array access
+    code = code.replace(/(let|var|const)?\s*(\w+)\s*=\s*parseFloat\s*\(\s*prompt\((['"`])(.*?)\3\)\s*\)/g,
+      (_, decl = "let", varName) => {
+        inputVars.push(varName);
+        return `${decl} ${varName} = parseFloat(inputs[${inputCounter++}])`;
+      });
+
+    code = code.replace(/(let|var|const)?\s*(\w+)\s*=\s*prompt\((['"`])(.*?)\3\)/g,
+      (_, decl = "let", varName) => {
+        inputVars.push(varName);
+        return `${decl} ${varName} = inputs[${inputCounter++}]`;
+      });
+
+    // Replace alert() with console.log()
+    code = code.replace(/alert\s*\((.*?)\)\s*;?/g, "console.log($1)");
+
+    // Avoid redeclaring fs or inputs
+    const fsDeclared = /\b(const|let|var)\s+fs\s*=\s*require\s*\(['"]fs['"]\)/.test(code);
+    const inputsDeclared = /\b(const|let|var)\s+inputs\b/.test(code);
+
+    const fsInit = `
+${fsDeclared ? "" : 'const fs = require("fs");'}
+${inputsDeclared ? "" : 'let inputs = fs.readFileSync(0).toString().trim().split("\\n");'}
+`.trim();
+
+    code = `${fsInit}\n\n${code}`;
   } else {
     return res.status(400).json({ output: `Language '${language}' not supported.` });
   }
@@ -63,11 +93,14 @@ app.post("/run", async (req, res) => {
     const response = await axios.post("https://emkc.org/api/v2/piston/execute", {
       language: selectedLanguage,
       version,
-      files: [{ name: "main", content: code }],
+      files: [{ name: "main.js", content: code }],
       stdin: input || "",
     });
 
-    res.json({ output: response.data.run.output });
+    // Ensure no duplication of input prompt outputs
+    const output = response.data.run.output.replace(/Enter .+:/g, "").trim(); // Remove duplicate prompts
+
+    res.json({ output });
   } catch (error) {
     console.error("Execution error:", error.message || error);
     res.status(500).json({ output: "Server Error: Unable to execute code." });

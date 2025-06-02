@@ -8,181 +8,244 @@ const Ui = () => {
   const [code, setCode] = useState("");
   const [output, setOutput] = useState("");
   const [isRunning, setIsRunning] = useState(false);
-  const [userInputs, setUserInputs] = useState([]);
-  const [currentPrompt, setCurrentPrompt] = useState("");
-  const [inputIndex, setInputIndex] = useState(0);
   const [testResults, setTestResults] = useState([]);
   const [programs, setPrograms] = useState([]);
   const [selectedProgram, setSelectedProgram] = useState(null);
   const [language, setLanguage] = useState("Python");
+  const [promptInputs, setPromptInputs] = useState([]);
+  const [promptList, setPromptList] = useState([]);
+  const [currentPromptCount, setCurrentPromptCount] = useState(0);
+  const [promptIndex, setPromptIndex] = useState(0);
+  const [currentPrompt, setCurrentPrompt] = useState("");
+
   const inputRef = useRef(null);
 
-  const inputRegex = /input\((["'`])(.*?)\1\)/g;
-
-  // Fetch programs filtered by selected language
-  //   useEffect(() => {
-  //   const fetchProgramsByLanguage = async () => {
-  //     try {
-  //       const response = await axios.get("http://localhost:5000/programs");
-  //       const filtered = response.data.filter(
-  //         (p) =>
-  //           typeof p.language === "string" &&
-  //           p.language.toLowerCase() === language.toLowerCase()
-  //       );
-  //       setPrograms(filtered);
-  //       if (filtered.length > 0) {
-  //         setSelectedProgram(filtered[0]);
-  //         setCode(filtered[0].code || "");
-  //       } else {
-  //         setSelectedProgram(null);
-  //         setCode("");
-  //       }
-  //     } catch (err) {
-  //       console.error("Error fetching programs:", err);
-  //     }
-  //   };
-
-  //   fetchProgramsByLanguage();
-  // }, [language]);
-
- useEffect(() => {
-  const fetchProgramsByLanguage = async () => {
-    try {
-      const response = await axios.get("http://localhost:5000/programs");
-      console.log("Programs from API:", response.data);
-      console.log("Selected language:", language);
-
-      const filtered = response.data.filter((program) =>
-        program.codes.some(
-          (code) => code.language?.toLowerCase() === language.toLowerCase()
-        )
-      );
-
-      console.log("Filtered:", filtered);
-
-      setPrograms(filtered);
-      if (filtered.length > 0) {
-        const selected = filtered[0];
-        const selectedCode = selected.codes.find(
-          (code) => code.language?.toLowerCase() === language.toLowerCase()
-        );
-        setSelectedProgram(selected);
-        setCode(selectedCode?.solution || "");
-      } else {
-        setSelectedProgram(null);
-        setCode("");
-      }
-    } catch (error) {
-      console.error("Failed to fetch programs:", error);
-    }
-  };
-
-  if (language) {
-    fetchProgramsByLanguage();
-  }
-}, [language]);
-
+  const inputRegex = /input\((["'`])(.*?)\1\)|prompt\((["'`])(.*?)\3\)/g;
 
   useEffect(() => {
-    // Clear ResizeObserver warnings (optional)
-    const observerErrorHandler = () => {
-      let raf = requestAnimationFrame(() => {
-        console.clear();
-      });
-      return () => cancelAnimationFrame(raf);
+    const fetchProgramsByLanguage = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/programs");
+        const filtered = response.data.filter((program) =>
+          program.codes.some(
+            (code) => code.language?.toLowerCase() === language.toLowerCase()
+          )
+        );
+
+        setPrograms(filtered);
+        if (filtered.length > 0) {
+          const selected = filtered[0];
+          const selectedCode = selected.codes.find(
+            (code) => code.language?.toLowerCase() === language.toLowerCase()
+          );
+          setSelectedProgram(selected);
+          setCode(selectedCode?.solution || "");
+        } else {
+          setSelectedProgram(null);
+          setCode("");
+        }
+      } catch (error) {
+        console.error("Failed to fetch programs:", error);
+      }
     };
-    observerErrorHandler();
-  }, []);
+
+    if (language) {
+      fetchProgramsByLanguage();
+    }
+  }, [language]);
 
   const toggleDarkMode = () => setDarkMode(!darkMode);
 
-  // Remove comments and standardize input() for Python only
-  const cleanCode = (code) => {
-    if (language.toLowerCase() === "python") {
-      return code
-        .split("\n")
-        .filter((line) => !line.trim().startsWith("#"))
-        .join("\n")
-        .replace(/input\s*\(\s*["'][^"']*["']\s*\)/g, "input()");
+//   const cleanCode = (code) => {
+//   const lang = language.toLowerCase();
+
+//   if (lang === "python") {
+//     return code
+//       .split("\n")
+//       .filter((line) => !line.trim().startsWith("#"))
+//       .join("\n")
+//       .replace(/input\s*\(\s*["'][^"']*["']\s*\)/g, "input()");
+//   }
+
+//   if (lang === "javascript") {
+//     let inputCounter = 0;
+
+//     // Replace all prompt(...) expressions with inputs[index]
+//     code = code.replace(/prompt\s*\((['"`])(.*?)\1\s*\)/g, () => {
+//       return `inputs[${inputCounter++}]`;
+//     });
+
+//     // Replace all alert(...) with console.log(...)
+//     code = code.replace(/alert\s*\((.*?)\)\s*;?/g, "console.log($1)");
+
+//     // Add stdin handling if fs is not already declared
+//     const fsDeclared = /\b(const|let|var)\s+fs\s*=\s*require\s*\(\s*['"`]fs['"`]\s*\)/.test(code);
+//     const fsInit = `
+// ${fsDeclared ? "" : 'const fs = require("fs");'}
+// let inputs = fs.readFileSync(0).toString().trim().split("\\n");
+//     `.trim();
+
+//     return `${fsInit}\n\n${code}`;
+//   }
+
+//   return code;
+// };
+
+const cleanCode = (code) => {
+  const lang = language.toLowerCase();
+
+  if (lang === "python") {
+    return code
+      .split("\n")
+      .filter((line) => !line.trim().startsWith("#"))
+      .join("\n")
+      .replace(/input\s*\(\s*["'][^"']*["']\s*\)/g, "input()");
+  }
+
+  if (lang === "javascript") {
+    let inputCounter = 0;
+
+    // Inject FS reader and inputs array
+    const fsHeader = `const fs = require("fs");
+let inputs = fs.readFileSync(0).toString().trim().split("\\n");`.trim();
+
+    // Replace all prompt(...) expressions with inputs[index] and print prompt text only once
+    code = code.replace(
+      /(?:(let|const|var)\s+)?(\w+)\s*=\s*(parseInt|parseFloat|Number)?\s*\(\s*(?:prompt)?\s*\(\s*(['"`])(.*?)\4\s*\)\s*\)/g,
+      (_, decl = "let", varName, func, __, promptText) => {
+        let parseFunc = func ? `${func}(` : ""; // If func exists, apply it
+        let inputLine = `${decl} ${varName} = ${parseFunc}inputs[${inputCounter}]${parseFunc ? ")" : ""};`;
+        inputCounter++; // Increment after input assignment
+        return `console.log("${promptText}");\n${inputLine}`;
+      }
+    );
+
+    // Replace all prompt directly with inputs[index] without printing prompt text again
+    code = code.replace(
+      /(?:(let|const|var)\s+)?(\w+)\s*=\s*prompt\s*\(\s*(['"`])(.*?)\3\s*\)/g,
+      (match, decl = "let", varName, quote, promptText) => {
+        return `${decl} ${varName} = inputs[${inputCounter++}];`;
+      }
+    );
+
+    // Matches for alerts and replace with console.log
+    code = code.replace(/alert\s*\((.*?)\)\s*;?/g, "console.log($1);");
+
+    // Ensure only one fs header is inserted
+    if (!/require\s*\(\s*['"`]fs['"`]\s*\)/.test(code)) {
+      code = `${fsHeader}\n\n${code}`;
     }
-    // For JS or other languages, return code as is
+
     return code;
-  };
+  }
+
+  return code;
+};
 
   const handleProgramChange = (e) => {
     const selectedId = e.target.value;
     const program = programs.find((p) => p._id === selectedId);
     setSelectedProgram(program);
-    setCode(program?.code || ""); // ✅ Set the code here
+
+    if (program) {
+      const selectedCode = program.codes.find(
+        (code) => code.language?.toLowerCase() === language.toLowerCase()
+      );
+      setCode(selectedCode?.solution || "");
+    } else {
+      setCode("");
+    }
+
     setOutput("");
     setTestResults([]);
-    setUserInputs([]);
+    setPromptInputs([]);
     setCurrentPrompt("");
-    setInputIndex(0);
+    setPromptIndex(0);
   };
 
   const handleRun = () => {
-    setOutput("");
-    setUserInputs([]);
-    setInputIndex(0);
-    setTestResults([]);
+  setOutput("");
+  setPromptInputs([]);  // Reset previous inputs
+  setPromptIndex(0);     // Reset prompt index
+  setTestResults([]);    // Reset test results
 
-    const uncommentedCode = cleanCode(code);
-    const prompts =
-      language.toLowerCase() === "python"
-        ? [...code.matchAll(inputRegex)].map((match) => match[2])
-        : []; // No prompt detection for JS (or you can add if needed)
+  const uncommentedCode = cleanCode(code);  // Clean the code
+  const prompts = [...code.matchAll(inputRegex)].map((match) => match[2] || match[4]); // Extract prompt text
 
-    if (prompts.length > 0) {
-      setCurrentPrompt(prompts[0]);
-      setTimeout(() => inputRef.current && inputRef.current.focus(), 100);
-    } else {
-      executeCode(uncommentedCode, "");
-    }
+  setPromptList(prompts);  // Set prompt list for display
+  setCurrentPromptCount(prompts.length);  // Set total prompts
+
+  if (prompts.length > 0) {
+    // Set up for the first prompt and focus the input
+    setPromptIndex(0);
+    setCurrentPrompt(prompts[0]);
+    setTimeout(() => inputRef.current && inputRef.current.focus(), 100);  // Focus input after prompt setup
+  } else {
+    // No prompts, directly execute code
+    executeCode(uncommentedCode, "");
+  }
+};
+
+
+  const executeCode = (codeToRun, input) => {
+    axios
+      .post("http://localhost:5000/run", {
+        code: codeToRun,
+        input,
+        language,
+      })
+      .then((res) => {
+        setOutput(res.data.output);
+      })
+      .catch((err) => {
+        console.error(err);
+        setOutput("Error running code.");
+      });
   };
 
   const handleInputSubmit = (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      const input = e.target.value;
-      const updatedInputs = [...userInputs, input];
-      setUserInputs(updatedInputs);
+  if (e.key !== "Enter") return;  // Only proceed on Enter key press
 
-      const prompts = [...code.matchAll(inputRegex)].map((match) => match[2]);
-      const nextIndex = inputIndex + 1;
+  const userInput = inputRef.current.value;
+  if (!userInput.trim()) return;  // Don't allow empty inputs
 
-      setOutput((prev) => prev + `${currentPrompt} ${input}\n`);
+  const updatedInputs = [...promptInputs, userInput];
+  setPromptInputs(updatedInputs);
 
-      if (nextIndex < prompts.length) {
-        setCurrentPrompt(prompts[nextIndex]);
-        setInputIndex(nextIndex);
-        e.target.value = "";
-        setTimeout(() => inputRef.current?.focus(), 100);
-      } else {
-        const finalInput = updatedInputs.join("\n");
-        const uncommentedCode = cleanCode(code);
-        executeCode(uncommentedCode, finalInput);
-      }
-    }
-  };
+  // Append prompt and input to output
+  const fullLine = `${currentPrompt} ${userInput}`;
+  setOutput((prev) => prev + fullLine + "\n");
 
-  const executeCode = async (codeToRun, inputToSend) => {
-    setIsRunning(true);
-    try {
-      const response = await axios.post("http://localhost:5000/run", {
+  inputRef.current.value = "";  // Clear input field
+
+  if (promptIndex + 1 < currentPromptCount) {
+    // More prompts to collect
+    setPromptIndex(promptIndex + 1);
+    setCurrentPrompt(promptList[promptIndex + 1]);
+    setTimeout(() => inputRef.current && inputRef.current.focus(), 100);  // Focus input field again
+  } else {
+    // All prompts collected — run the code with all inputs
+    const fullInput = updatedInputs.join("\n");
+    setCurrentPrompt(null);  // No more prompts to show
+
+    const codeToRun = cleanCode(code);  // Clean the code
+
+    axios
+      .post("http://localhost:5000/run", {
         code: codeToRun,
-        input: inputToSend,
+        input: fullInput,
         language,
+      })
+      .then((res) => {
+        setOutput((prev) => prev + res.data.output);  // Append result to output
+      })
+      .catch((err) => {
+        console.error(err);
+        setOutput((prev) => prev + "\nError running code.");
       });
-      setOutput((prev) => prev + response.data.output);
-    } catch (error) {
-      setOutput("Error: Unable to execute code.");
-      console.error(error);
-    }
-    setIsRunning(false);
-    setCurrentPrompt("");
-    setInputIndex(0);
-  };
+  }
+};
+
 
   const handleRunTestCases = async () => {
     if (!selectedProgram || !selectedProgram.testCases) {
@@ -230,73 +293,75 @@ const Ui = () => {
   };
 
   return (
-  <div className={`container ${darkMode ? "dark" : ""}`}>
-    <div className="header">
-      <div className="left-controls">
-        <select
-          value={selectedProgram?._id || ""}
-          onChange={handleProgramChange}
-          className="program-select"
-        >
-          {programs.map((program) => (
+    <div className={`container ${darkMode ? "dark" : ""}`}>
+      <div className="header">
+        <div className="left-controls">
+          <select
+            value={selectedProgram?._id || ""}
+            onChange={handleProgramChange}
+            className="program-select"
+          >
+            {programs.map((program) => (
               <option key={program._id} value={program._id}>
                 {program.title}
               </option>
-          ))}
-        </select>
+            ))}
+          </select>
 
-        <button
-          className="run-button"
-          onClick={handleRun}
-          disabled={isRunning}
-        >
-          {isRunning ? "Running..." : "Run User Code"}
-        </button>
+          <button
+            className="run-button"
+            onClick={handleRun}
+            disabled={isRunning}
+          >
+            {isRunning ? "Running..." : "Run User Code"}
+          </button>
 
-        <button
-          className="run-button"
-          onClick={handleRunTestCases}
-          disabled={isRunning}
-        >
-          {isRunning ? "Running..." : "Run with Test Cases"}
-        </button>
+          <button
+            className="run-button"
+            onClick={handleRunTestCases}
+            disabled={isRunning}
+          >
+            {isRunning ? "Running..." : "Run with Test Cases"}
+          </button>
 
-        <select
-          className="language-select"
-          value={language}
-          onChange={(e) => setLanguage(e.target.value)}
-        >
-          <option>Python</option>
-          <option>JavaScript</option>
-          <option>Java</option>
-          <option>C</option>
-          <option>C++</option>
-        </select>
+          <select
+            className="language-select"
+            value={language}
+            onChange={(e) => setLanguage(e.target.value)}
+          >
+            <option>Python</option>
+            <option>JavaScript</option>
+            <option>Java</option>
+            <option>C</option>
+            <option>C++</option>
+          </select>
 
-        <button className="toggle-btn" onClick={toggleDarkMode}>
-          {darkMode ? "🌞 Light" : "🌙 Dark"}
-        </button>
-      </div>
-    </div>
-
-    <div className="main">
-      <div className="editor">
-        <div className="problem-statement">
-          <p>{selectedProgram?.description}</p>
-        </div>
-
-        <div style={{ height: "800px", border: "1px solid #ccc" }}>
-          <Editor
-            height="100%"
-            language={language.toLowerCase() === "javascript" ? "javascript" : "python"}
-            value={code}
-            theme={darkMode ? "vs-dark" : "light"}
-            onChange={(value) => setCode(value || "")}
-          />
+          <button className="toggle-btn" onClick={toggleDarkMode}>
+            {darkMode ? "🌞 Light" : "🌙 Dark"}
+          </button>
         </div>
       </div>
 
-      <div className="output">
+      <div className="main">
+        <div className="editor">
+          <div className="problem-statement">
+            <p>{selectedProgram?.description}</p>
+          </div>
+
+          <div style={{ height: "800px", border: "1px solid #ccc" }}>
+            <Editor
+              height="100%"
+              language={
+                language.toLowerCase() === "javascript" ? "javascript" : "python"
+              }
+              value={code}
+              theme={darkMode ? "vs-dark" : "light"}
+              onChange={(value) => setCode(value || "")}
+            />
+          </div>
+        </div>
+
+        <div className="output">
           <div className="output-label">Output:</div>
           <div className="console">
             <pre>{output}</pre>
@@ -315,7 +380,7 @@ const Ui = () => {
             )}
           </div>
 
-       {testResults.length > 0 && (
+          {testResults.length > 0 && (
             <div className="test-results">
               <h4>Test Case Results:</h4>
               {testResults.map((result, idx) => (
@@ -324,9 +389,7 @@ const Ui = () => {
                   className={`test-case ${result.passed ? "pass" : "fail"}`}
                 >
                   <strong>Input:</strong>{" "}
-                  {result.input
-                    ? result.input.split("\n").join(", ")
-                    : "No input provided"}
+                  {result.input ? result.input.split("\n").join(", ") : "No input provided"}
                   <br />
                   <strong>Expected Output:</strong> {result.expectedOutput}
                   <br />
@@ -337,11 +400,11 @@ const Ui = () => {
                 </div>
               ))}
             </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
 };
 
 export default Ui;
