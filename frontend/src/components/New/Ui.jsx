@@ -22,7 +22,7 @@ const Ui = () => {
   const inputRef = useRef(null);
   // const navigate = useNavigate();
 
-  const inputRegex = /input\((["'`])(.*?)\1\)|prompt\((["'`])(.*?)\3\)/g;
+  const inputRegex = /input\s*\(\s*['"`](.*?)['"`]\s*\)|prompt\s*\(\s*['"`](.*?)['"`]\s*\)|printf\s*\(\s*["'`](.*?)["'`]\s*\)/g;
 
   useEffect(() => {
     const fetchProgramsByLanguage = async () => {
@@ -58,60 +58,85 @@ const Ui = () => {
 
   const toggleDarkMode = () => setDarkMode(!darkMode);
 
-  const cleanCode = (code) => {
-    const lang = language.toLowerCase();
+const cleanCode = (code) => {
+  const lang = language.toLowerCase();
 
-    if (lang === "python") {
-      return code
-        .split("\n")
-        .filter((line) => !line.trim().startsWith("#"))
-        .join("\n")
-        .replace(/input\s*\(\s*["'][^"']*["']\s*\)/g, "input()");
+  if (lang === "python") {
+    return code
+      .split("\n")
+      .filter((line) => !line.trim().startsWith("#"))
+      .join("\n")
+      .replace(/input\s*\(\s*["'][^"']*["']\s*\)/g, "input()");
+  }
+
+if (lang === "javascript") {
+  let inputCounter = 0;
+
+  const fsHeader = `const fs = require("fs");
+let inputs = fs.readFileSync(0).toString().trim().split(/\\s+/);`;
+
+  // Handle declarations: let x = parseInt(prompt("text"));
+  code = code.replace(
+    /(?:(let|const|var)\s+)?(\w+)\s*=\s*(parseInt|parseFloat|Number)?\s*\(\s*prompt\s*\(\s*(['"`])(.*?)\4\s*\)\s*\)/g,
+    (_, decl = "let", varName, func, __, promptText) => {
+      const parseFunc = func ? `${func}(` : "";
+      const closeParen = func ? ")" : "";
+      return `console.log(\`${promptText}\`);\n${decl} ${varName} = ${parseFunc}inputs[${inputCounter++}]${closeParen};`;
     }
+  );
 
-    if (lang === "javascript") {
-      let inputCounter = 0;
-
-      // Inject FS reader and inputs array
-      const fsHeader = `const fs = require("fs");
-let inputs = fs.readFileSync(0).toString().trim().split("\\n");`;
-
-      // Replace prompt with parse functions and show prompt text
-      code = code.replace(
-        /(?:(let|const|var)\s+)?(\w+)\s*=\s*(parseInt|parseFloat|Number)?\s*\(\s*prompt\s*\(\s*(['"`])(.*?)\4\s*\)\s*\)/g,
-        (_, decl = "let", varName, func, __, promptText) => {
-          const parseFunc = func ? `${func}(` : "";
-          const closeParen = func ? ")" : "";
-          const inputLine = `${decl} ${varName} = ${parseFunc}inputs[${inputCounter++}]${closeParen};`;
-          return `console.log("${promptText}");\n${inputLine}`;
-        }
-      );
-
-      // Replace prompt without parse function
-      code = code.replace(
-        /(?:(let|const|var)\s+)?(\w+)\s*=\s*prompt\s*\(\s*(['"`])(.*?)\3\s*\)/g,
-        (_, decl = "let", varName, __, promptText) => {
-          return `console.log("${promptText}");\n${decl} ${varName} = inputs[${inputCounter++}];`;
-        }
-      );
-
-      // Safer alert -> console.log to avoid breaking ternaries or function calls
-      code = code.replace(/alert\s*\(([^()]*(?:\([^()]*\)[^()]*)*)\)/g, (_, inner) => {
-        return `console.log(${inner.trim()});`;
-      });
-
-
-      // Insert fs header only if not already present
-      if (!/require\s*\(\s*['"`]fs['"`]\s*\)/.test(code)) {
-        code = `${fsHeader}\n\n${code}`;
-      }
-
-      return code;
+  // Handle declarations: let x = prompt("text");
+  code = code.replace(
+    /(?:(let|const|var)\s+)?(\w+)\s*=\s*prompt\s*\(\s*(['"`])(.*?)\3\s*\)/g,
+    (_, decl = "let", varName, __, promptText) => {
+      return `console.log(\`${promptText}\`);\n${decl} ${varName} = inputs[${inputCounter++}];`;
     }
+  );
 
-    return code;
-  };
+  // Handle non-declarations inside loops: a[i][j] = parseInt(prompt("text"));
+  code = code.replace(
+    /(\w+\[.*?\])\s*=\s*(parseInt|parseFloat|Number)?\s*\(\s*prompt\s*\(\s*(['"`])(.*?)\3\s*\)\s*\)/g,
+    (_, accessor, func, __, promptText) => {
+      const parseFunc = func ? `${func}(` : "";
+      const closeParen = func ? ")" : "";
+      return `console.log(\`${promptText}\`);\n${accessor} = ${parseFunc}inputs[${inputCounter++}]${closeParen};`;
+    }
+  );
 
+  // Replace alert() with console.log()
+  code = code.replace(/alert\s*\(([^()]*(?:\([^()]*\)[^()]*)*)\)/g, (_, inner) => {
+    return `console.log(${inner.trim()});`;
+  });
+
+  // Add fs header if not already present
+  if (!/require\s*\(\s*['"`]fs['"`]\s*\)/.test(code)) {
+    code = `${fsHeader}\n\n${code}`;
+  }
+
+  return code;
+}
+
+  if (lang === "c") {
+    const mainStart = code.indexOf("int main()");
+    const altMainStart = code.indexOf("void main()");
+    const startIndex = mainStart !== -1 ? mainStart : altMainStart;
+
+    if (startIndex === -1) return code; // No main() found, return as-is
+
+    const beforeMain = code.slice(0, startIndex);
+    const mainAndAfter = code.slice(startIndex);
+
+    // Just clean up spacing; no prompt injection needed
+    const cleanedMain = mainAndAfter
+      .split("\n")
+      .map(line => line.trimEnd()) // Avoid accidental extra whitespace
+      .join("\n");
+
+    return `${beforeMain}${cleanedMain}`;
+  }
+
+  return code;
+};
 
   const handleProgramChange = (e) => {
     const selectedId = e.target.value;
@@ -134,29 +159,52 @@ let inputs = fs.readFileSync(0).toString().trim().split("\\n");`;
     setPromptIndex(0);
   };
 
-  const handleRun = () => {
-    setOutput("");
-    setPromptInputs([]);  // Reset previous inputs
-    setPromptIndex(0);     // Reset prompt index
-    setTestResults([]);    // Reset test results
+ const handleRun = () => {
+  setOutput("");
+  setPromptInputs([]);     // Reset previous inputs
+  setPromptIndex(0);       // Reset prompt index
+  setTestResults([]);      // Reset test results
 
-    const uncommentedCode = cleanCode(code);  // Clean the code
-    const prompts = [...code.matchAll(inputRegex)].map((match) => match[2] || match[4]); // Extract prompt text
+  const uncommentedCode = cleanCode(code);  // Clean the code
 
-    setPromptList(prompts);  // Set prompt list for display
-    setCurrentPromptCount(prompts.length);  // Set total prompts
+  const lang = language.toLowerCase();
+  let prompts = [];
 
-    if (prompts.length > 0) {
-      // Set up for the first prompt and focus the input
-      setPromptIndex(0);
-      setCurrentPrompt(prompts[0]);
-      setTimeout(() => inputRef.current && inputRef.current.focus(), 100);  // Focus input after prompt setup
-    } else {
-      // No prompts, directly execute code
-      executeCode(uncommentedCode, "");
+  if (lang === "c") {
+    // Extract prompts only from inside main()
+    let mainStartIndex = code.indexOf("int main()");
+    if (mainStartIndex === -1) {
+      mainStartIndex = code.indexOf("void main()");
     }
-  };
 
+    const codeFromMain = mainStartIndex !== -1 ? code.slice(mainStartIndex) : "";
+
+    const promptRegex = /printf\s*\(\s*"([^"%\\]*?)"\s*\)/g;  // Exclude formatted outputs like "%d"
+    let promptMatch;
+
+    while ((promptMatch = promptRegex.exec(codeFromMain)) !== null) {
+      prompts.push(promptMatch[1]);
+    }
+  } else {
+    // Default inputRegex handling for JS/Python
+    prompts = [...code.matchAll(inputRegex)].map(
+      (match) => match[1] || match[2] || match[3]
+    );
+  }
+
+  console.log("Extracted prompts:", prompts);
+
+  setPromptList(prompts);
+  setCurrentPromptCount(prompts.length);
+
+  if (prompts.length > 0) {
+    setPromptIndex(0);
+    setCurrentPrompt(prompts[0]);
+    setTimeout(() => inputRef.current && inputRef.current.focus(), 100);
+  } else {
+    executeCode(uncommentedCode, "");
+  }
+};
 
   const executeCode = (codeToRun, input) => {
     axios
