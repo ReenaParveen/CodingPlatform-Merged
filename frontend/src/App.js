@@ -1,8 +1,8 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Dashboard from "../src/components/New/Dashboard";
-import Ui from "../src/components/New/Ui";
-import Admin from "../src/components/New/Admin";
+import Dashboard from "./Components/Dashboard"
+import Ui from "./Components/Ui";
+import Admin from "./Components/Admin";
 
 const App = () => {
   return (

@@ -204,6 +204,8 @@ const AdminPrograms = () => {
                         <MenuItem value="Python">Python</MenuItem>
                         <MenuItem value="JavaScript">JavaScript</MenuItem>
                         <MenuItem value="C">C</MenuItem>
+                        <MenuItem value="Java">Java</MenuItem>
+                        <MenuItem value="C++">C++</MenuItem>
                       </Select>
                     </FormControl>
                     <TextField
