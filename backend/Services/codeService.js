@@ -25,7 +25,21 @@ const compileAndRunCode = (code, input = '') => {
         fs.unlinkSync(filePath);
         fs.unlinkSync(inputFilePath);
         if (err) return reject(new Error(`Execution Error: ${stderr}`));
-        resolve(stdout || stderr);
+
+        const promptMatches = [
+          ...code.matchAll(/System\.out\.print(?:ln)?\s*\(\s*["'`]([^\"'+\\r\\n]*)["'`]\s*\)/g)
+        ];
+        const promptLines = promptMatches.map(m => m[1]?.trim()).filter(Boolean);
+
+        const outputLines = stdout.split(/\r?\n/).filter(line => {
+          const trimmed = line.trim();
+          return (
+            trimmed.length > 0 &&
+            !promptLines.some((prompt) => trimmed && trimmed.includes(prompt))
+          );
+        });
+
+        resolve(stdout.trim());
       });
     });
   });
@@ -33,16 +47,16 @@ const compileAndRunCode = (code, input = '') => {
 
 
 const executeJavaScriptCode = (code) => {
-    return new Promise((resolve, reject) => {
-        const filePath = path.join(tempDir, 'script.js');
-        fs.writeFileSync(filePath, code);
+  return new Promise((resolve, reject) => {
+    const filePath = path.join(tempDir, 'script.js');
+    fs.writeFileSync(filePath, code);
 
-        exec(`node "${filePath}"`, (err, stdout, stderr) => {
-            fs.unlinkSync(filePath); // Clean up the file after execution
-            if (err) return reject(new Error(`Execution Error: ${stderr}`));
-            resolve(stdout || stderr);
-        });
+    exec(`node "${filePath}"`, (err, stdout, stderr) => {
+      fs.unlinkSync(filePath); // Clean up the file after execution
+      if (err) return reject(new Error(`Execution Error: ${stderr}`));
+      resolve(stdout || stderr);
     });
+  });
 };
 
 const extractMainClassName = (code) => {
@@ -51,23 +65,23 @@ const extractMainClassName = (code) => {
 };
 
 const compileAndRunPythonCode = (code, input = '') => {
-    return new Promise((resolve, reject) => {
-        const filePath = path.join(tempDir, 'main.py');
-        const inputFilePath = path.join(tempDir, 'input.txt');
-        fs.writeFileSync(filePath, code);
-        fs.writeFileSync(inputFilePath, input);
+  return new Promise((resolve, reject) => {
+    const filePath = path.join(tempDir, 'main.py');
+    const inputFilePath = path.join(tempDir, 'input.txt');
+    fs.writeFileSync(filePath, code);
+    fs.writeFileSync(inputFilePath, input);
 
-        exec(`python "${filePath}" < "${inputFilePath}"`, (err, stdout, stderr) => {
-            fs.unlinkSync(filePath);
-            fs.unlinkSync(inputFilePath);
-            if (err) return reject(new Error(`Execution Error: ${stderr}`));
-            resolve(stdout || stderr);
-        });
+    exec(`python "${filePath}" < "${inputFilePath}"`, (err, stdout, stderr) => {
+      fs.unlinkSync(filePath);
+      fs.unlinkSync(inputFilePath);
+      if (err) return reject(new Error(`Execution Error: ${stderr}`));
+      resolve(stdout || stderr);
     });
+  });
 };
 
 module.exports = {
-    compileAndRunCode,
-    executeJavaScriptCode,
-    compileAndRunPythonCode,
+  compileAndRunCode,
+  executeJavaScriptCode,
+  compileAndRunPythonCode,
 };
