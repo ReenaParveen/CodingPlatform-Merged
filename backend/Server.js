@@ -63,12 +63,15 @@ app.post("/run", async (req, res) => {
     if (language === "Python") {
       console.log("python code exceuted");
       output = await codeService.compileAndRunPythonCode(code, input || '');
+      console.log(output);
     } else if (language === "JavaScript") {
       console.log("javascript code exceuted");
       output = await codeService.executeJavaScriptCode(code);
+      console.log(output);
     } else if (language === "Java") {
       console.log("Java code exceuted");
       output = await codeService.compileAndRunCode(code, input || '');
+      console.log(output);
     } else {
       return res.status(400).json({ output: `Language '${language}' not supported.` });
     }
