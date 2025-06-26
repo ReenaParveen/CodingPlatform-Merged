@@ -247,3 +247,9 @@ body {
 .container.dark .test-case strong {
   color: #fff;
 }
+
+
+.console pre {
+  white-space: pre;  /* respect newlines & spaces */
+  font-family: monospace;
+}

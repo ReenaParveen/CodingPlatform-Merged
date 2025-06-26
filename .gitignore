@@ -1,9 +1,5 @@
-/frontend/node_modules
-/backend/node_modules
-/backend/.env
-/frontend/.env
-/frontend/package-lock.json
-/backend/package-lock.json
-/backend/ssl/server.cert
-/backend/ssl/server.key
-backend/serviceaccount.json
+frontend/node_modules
+backend/node_modules
+backend/temp
+backend/package-lock.json
+frontend/package-lock.json
